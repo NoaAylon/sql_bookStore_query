@@ -1,0 +1,164 @@
+1)
+SELECT * FROM book WHERE quantity>0;
+
+2)
+SELECT * FROM orders;
+
+3)
+SELECT * FROM customer;
+
+4)
+SELECT * FROM supplier;
+
+5)
+SELECT * FROM purchase WHERE purchase_date
+BETWEEN '2018-07-04' AND '2018-07-24';
+
+6)
+SELECT * FROM sales WHERE on_sale=1;
+
+7)
+SELECT * FROM book WHERE title='Math' AND quantity>0;
+
+8)
+SELECT * FROM provider_stock WHERE book_id=10;
+
+9)
+SELECT SUM(pd.quantity)
+FROM purchase as p, purchase_details as pd
+  where p.purchase_id = pd.purchase_id AND
+  pd.book_id = ? and p.purchase_date >= ?;
+
+10)
+SELECT SUM(pd.quantity)
+FROM purchase AS p, purchase_details AS pd
+  WHERE p.purchase_id = pd.purchase_id AND
+  p.customer_id =? AND p.purchase_date >= ?;
+
+11)
+SELECT c.customer_id, c.purchase_date
+FROM
+        (SELECT p.purchase_date, p.customer_id, SUM(pd.quantity) SumQuan
+        FROM purchase AS p
+        JOIN purchase_details AS pd
+        ON pd.purchase_id = p.purchase_id
+        GROUP BY p.customer_id)
+AS c
+WHERE c.purchase_date >=?
+ORDER BY SumQuan DESC
+LIMIT 1;
+
+12)
+SELECT o.provider_id, SUM(o.quantity) SumQUan
+FROM orders AS o WHERE o.order_date >=?
+GROUP BY o.provider_id
+ORDER BY SumQuan DESC
+LIMIT 1;
+
+13)
+SELECT SUM(o.quantity) SumQUan
+FROM orders AS o WHERE o.order_date BETWEEN ? AND ? ;
+
+14)
+SELECT COUNT(is_arrived)
+FROM orders
+WHERE is_arrived = 1
+AND order_date BETWEEN ? AND ?;
+
+15)
+SELECT p.customer_id ,SUM(j.price) AS discount FROM purchase AS p
+JOIN( SELECT pd.quantity, pd.purchase_id, SUM(d.discount * pd.quantity) AS price 
+FROM purchase_details AS pd 
+JOIN( SELECT b.book_id, (b.price - s.sale_price) AS discount 
+FROM book AS b 
+JOIN sales AS s ON b.book_id = s.book_id AND s.on_sale = 1) AS d 
+ON pd.book_id = d.book_id GROUP BY pd.purchase_id) AS j 
+WHERE p.purchase_id = j.purchase_id AND p.customer_id = ?
+ AND p.purchase_date >= ? GROUP BY p.customer_id
+
+16)
+SELECT QUARTER(p.purchase_date) AS Q, SUM(j.sum_purchase)
+FROM purchase AS p
+JOIN
+   ( SELECT pd.purchase_id, SUM(pd.quantity * b.price) AS sum_purchase
+    FROM purchase_details AS pd, book AS b
+    WHERE pd.book_id = b.book_id
+    GROUP BY pd.purchase_id) AS j
+WHERE p.purchase_id = j.purchase_id
+GROUP BY Q;
+
+
+17)
+SELECT first_name, last_name FROM customer
+WHERE join_date >=?;
+
+18)
+SELECT o.provider_id, SUM(t.sumAll) AS total
+FROM orders AS o
+
+JOIN(SELECT o.provider_id, o.book_id, o.quantity, o.order_date, ps.provider_price,
+  
+(o.quantity * ps.provider_price) AS sumAll
+  
+FROM orders AS o, provider_stock AS ps
+    
+WHERE ps.provider_id = o.provider_id
+) AS t
+
+ON o.provider_id = t.provider_id
+
+WHERE t.order_date BETWEEN ? AND ? AND o.provider_id = ?
+
+GROUP BY o.provider_id;
+
+19)
+SELECT p.salesman_id , p.purchase_date, SUM(t.sumAll) AS total 
+
+FROM purchase AS p
+ 
+JOIN(
+  
+SELECT pd.quantity, pd.book_id, pd.purchase_id,
+  (pd.quantity * b.price) AS sumAll,b.price
+  
+FROM purchase_details AS pd
+
+ JOIN book AS b
+  ON b.book_id = pd.book_id
+ ) AS t
+ 
+ON p.purchase_id = t.purchase_id
+
+WHERE p.purchase_date BETWEEN ? AND ? AND p.salesman_id =?
+
+GROUP BY p.salesman_id;
+
+20)
+SELECT p.purchase_date, pd.book_id, pd.quantity, SUM(pd.quantity) SumQuan
+
+FROM purchase_details AS pd
+
+JOIN purchase AS p
+
+ON p.purchase_id = pd.purchase_id
+
+WHERE p.purchase_date 
+BETWEEN ? AND ?
+
+GROUP BY pd.book_id
+
+ORDER BY SumQuan DESC 
+LIMIT 10;
+
+
+/****************************************/
+//DROP foreign key
+ALTER TABLE purchase
+DROP FOREIGN KEY purchase_ibfk_1;
+
+## ADD FOREIGN KEY
+ALTER TABLE purchase
+  ADD CONSTRAINT purchase_ibfk_1
+  FOREIGN KEY (customer_id)
+  REFERENCES customer(customer_id)
+  ON update CASCADE;
